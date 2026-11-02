@@ -358,7 +358,7 @@ private fun DownloadCard(
                 ) {
                     when (task.state) {
                         DownloadState.DOWNLOADING, DownloadState.PAUSED -> Text(
-                            "${humanSize(task.downloadedBytes)} / ${humanSize(task.totalBytes)}",
+                            "${humanSize(task.downloadedBytes)} / ${humanSize(task.totalBytes)}${downloadSpeedSuffix(task)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = c.inkMuted,
                             fontFamily = FontFamily.Monospace,
