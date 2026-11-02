@@ -2,6 +2,8 @@ package io.ymusic.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import io.ymusic.download.DownloadState
+import io.ymusic.download.DownloadTask
 
 /**
  * Menghitung kecepatan download (byte/detik) dari selisih downloadedBytes dan updatedAt,
@@ -37,4 +39,11 @@ private fun formatSpeed(bytesPerSecond: Double): String {
     }
     val tenths = (value * 10).toLong()
     return "${tenths / 10}.${tenths % 10} ${units[index]}"
+}
+
+/** Dipanggil dari DownloadsScreen: "  •  2.4 MB/s" saat DOWNLOADING, kosong selain itu. */
+@Composable
+internal fun downloadSpeedSuffix(task: DownloadTask): String {
+    val speed = rememberDownloadSpeed(task.id, task.downloadedBytes, task.updatedAt)
+    return if (task.state == DownloadState.DOWNLOADING && speed.isNotEmpty()) "  •  $speed" else ""
 }
