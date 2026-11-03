@@ -52,6 +52,7 @@ internal fun DownloadSettingsRows(graph: AppGraph) {
     if (graph.mediaStore != null) DownloadLocationRow(graph)
     QuickDownloadRow(graph)
     Mp4CodecRow(graph)
+    MaxConcurrentRow(graph)
     if (graph.downloads?.ffmpegAvailable == true) {
         ToggleRow(graph, AppSettings.downloadMp3SourceBitrate, Res.string.settings_mp3_source_bitrate, Res.string.settings_mp3_source_bitrate_hint)
     }
