@@ -47,7 +47,7 @@ internal object FormatSelection {
         val video = if (container == DownloadFormat.VIDEO_WEBM) playable.filter { isWebmVideo(it.mimeType) } else playable
         if (video.isEmpty()) return null
         val preferMp4Codec = container == DownloadFormat.VIDEO_MP4
-        return video.sortedWith(
+        return filterMp4Codec(video, preferMp4Codec).sortedWith(
             // 1) closeness to the requested height (0 distance when unspecified → pure quality sort)
             compareBy<AdaptiveFormat> { requestedHeight?.let { req -> kotlin.math.abs((it.height ?: 0) - req) } ?: 0 }
                 // 2) codec that copies cleanly into the target container
@@ -79,7 +79,8 @@ internal enum class AudioCodec {
         fun of(format: DownloadFormat): AudioCodec = when (format) {
             DownloadFormat.MP3 -> ANY
             DownloadFormat.M4A, DownloadFormat.VIDEO_MP4 -> AAC
-            DownloadFormat.AUDIO_WEBM, DownloadFormat.VIDEO_WEBM -> OPUS
+            DownloadFormat.AUDIO_WEBM,
+            DownloadFormat.VIDEO_WEBM -> OPUS
         }
     }
 }
@@ -87,7 +88,9 @@ internal enum class AudioCodec {
 /** VP8/VP9/AV1 — the video codecs ffmpeg's `webm` muxer accepts. */
 internal fun isWebmVideo(mimeType: String): Boolean {
     val codecs = mimeType.substringAfter("codecs=", "").trim('"', ' ')
-    return codecs.startsWith("vp8") || codecs.startsWith("vp9") || codecs.startsWith("vp09") || codecs.startsWith("av01")
+    return codecs.startsWith("vp8") ||
+        codecs.startsWith("vp9") || codecs.startsWith("vp09") ||
+        codecs.startsWith("av01")
 }
 
 /** An `audioTrack.id`'s language: `en` of `en.4`, `es-US` of `es-US.3`. */
