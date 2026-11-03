@@ -55,7 +55,7 @@ class DownloadService(
     private val storage: DownloadStorage,
     /** How many downloads run at once — the concurrent byte-download + ffmpeg work. Player-response
      *  fetches are paced separately ([PlayerResponseGate]). */
-    private val maxConcurrent: Int = 3,
+    maxConcurrent: Int = 3,
     mediaCache: MediaCache? = null,
     /** Persistent segment index used to resume SABR downloads (share the player cache's index). */
     segmentIndex: SegmentIndex? = null,
@@ -71,6 +71,14 @@ class DownloadService(
 ) {
     /** True where ffmpeg exists (Android/desktop). False on iOS — the UI hides MP3/video outputs there. */
     val ffmpegAvailable: Boolean = ffmpeg != null
+        /** Berapa unduhan yang boleh berjalan bersamaan (1 sampai 32); bisa diubah saat aplikasi berjalan. */
+    var maxConcurrent: Int = maxConcurrent.coerceIn(1, 32)
+        private set
+
+    fun applyMaxConcurrent(value: Int) {
+        maxConcurrent = value.coerceIn(1, 32)
+        fillSlots()
+    }
 
     private val log = logger?.fork("download")?.fork("service")
 
