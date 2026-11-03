@@ -51,7 +51,7 @@ internal object FormatSelection {
             // 1) closeness to the requested height (0 distance when unspecified → pure quality sort)
             compareBy<AdaptiveFormat> { requestedHeight?.let { req -> kotlin.math.abs((it.height ?: 0) - req) } ?: 0 }
                 // 2) codec that copies cleanly into the target container
-                .thenByDescending { if (preferMp4Codec) it.mimeType.contains("mp4") else it.mimeType.contains("webm") }
+                .thenByDescending { if (preferMp4Codec) mp4CodecRank(it.mimeType) else if (it.mimeType.contains("webm")) 1 else 0 }
                 // 3) higher resolution, then bigger stream (bitrate proxy)
                 .thenByDescending { it.height ?: 0 }
                 .thenByDescending { it.clen },
