@@ -117,17 +117,32 @@ jobs:
         working-directory: YMusicV4
         run: ./gradlew -Pproduction=true :androidApp:assembleRelease
 
-      - name: Sign APK with test key
+      - name: Sign APK
         working-directory: YMusicV4
+        env:
+          KEY_PASSPHRASE: ${{ secrets.KEY_PASSPHRASE }}
         run: |
-          keytool -genkeypair -keystore "$RUNNER_TEMP/test.jks" -alias test \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android -dname "CN=Test"
+          set -euo pipefail
+          ENC=fork-signing/ymusic-fork.jks.enc
+          if [ -n "$KEY_PASSPHRASE" ] && [ -f "$ENC" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+              -pass env:KEY_PASSPHRASE -in "$ENC" -out "$RUNNER_TEMP/release.jks"
+            ALIAS=ymusic-fork
+            export KS_PASS="$KEY_PASSPHRASE"
+          else
+            echo "::warning::Kunci tetap belum ada, memakai kunci uji coba sementara"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -alias test \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android -dname "CN=Test"
+            ALIAS=test
+            export KS_PASS=android
+          fi
           AS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
           for f in androidApp/build/outputs/apk/release/*.apk; do
-            "$AS" sign --ks "$RUNNER_TEMP/test.jks" --ks-pass pass:android \
-              --out "${f%.apk}-signed.apk" "$f"
+            "$AS" sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$ALIAS" \
+              --ks-pass env:KS_PASS --out "${f%.apk}-signed.apk" "$f"
           done
+          rm -f "$RUNNER_TEMP/release.jks"
 
       - uses: actions/upload-artifact@v4
         with:
