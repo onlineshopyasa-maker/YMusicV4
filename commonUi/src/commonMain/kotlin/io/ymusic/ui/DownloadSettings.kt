@@ -154,6 +154,7 @@ internal suspend fun hasUsableDownloadLocation(graph: AppGraph): Boolean {
  */
 @Composable
 internal fun DefaultDownloadLocationPrompt(graph: AppGraph) {
+    Mp4CodecSync(graph)
     val mediaStore = graph.mediaStore ?: return
     if (graph.downloads == null) return
     val scope = rememberCoroutineScope()
