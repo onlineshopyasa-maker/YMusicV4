@@ -4,29 +4,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import io.ymusic.download.DownloadState
 import io.ymusic.download.DownloadTask
+import kotlin.time.DurationUnit
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+
+private class SpeedState(
+    var bytes: Long,
+    var mark: TimeMark,
+    var smooth: Double,
+)
 
 /**
- * Menghitung kecepatan download (byte/detik) dari selisih downloadedBytes dan updatedAt,
- * dihaluskan supaya angka tidak loncat-loncat. Mengembalikan teks seperti "2.4 MB/s",
- * atau "" kalau belum ada data.
+ * Kecepatan download (byte/detik) dari selisih downloadedBytes dan jam internal,
+ * dihaluskan supaya tidak loncat-loncat. Hasil seperti "2.4 MB/s", atau "" kalau belum ada data.
  */
 @Composable
 internal fun rememberDownloadSpeed(
     key: Any,
     downloadedBytes: Long,
-    updatedAt: Long,
 ): String {
-    // [0] = byte terakhir, [1] = waktu terakhir (ms), [2] = kecepatan halus (byte/detik)
-    val state = remember(key) { doubleArrayOf(downloadedBytes.toDouble(), updatedAt.toDouble(), 0.0) }
-    val dt = updatedAt.toDouble() - state[1]
-    val db = downloadedBytes.toDouble() - state[0]
-    if (dt > 0 && db >= 0) {
-        val instant = db * 1000.0 / dt
-        state[2] = if (state[2] == 0.0) instant else state[2] * 0.7 + instant * 0.3
-        state[0] = downloadedBytes.toDouble()
-        state[1] = updatedAt.toDouble()
+    val s = remember(key) { SpeedState(downloadedBytes, TimeSource.Monotonic.markNow(), 0.0) }
+    if (downloadedBytes > s.bytes) {
+        val seconds = s.mark.elapsedNow().toDouble(DurationUnit.SECONDS)
+        if (seconds >= 0.5) {
+            val instant = (downloadedBytes - s.bytes) / seconds
+            s.smooth = if (s.smooth == 0.0) instant else s.smooth * 0.6 + instant * 0.4
+            s.bytes = downloadedBytes
+            s.mark = TimeSource.Monotonic.markNow()
+        }
+    } else if (downloadedBytes < s.bytes) {
+        s.bytes = downloadedBytes
+        s.mark = TimeSource.Monotonic.markNow()
+        s.smooth = 0.0
     }
-    return if (state[2] > 0.0) formatSpeed(state[2]) else ""
+    return if (s.smooth > 0.0) formatSpeed(s.smooth) else ""
 }
 
 private fun formatSpeed(bytesPerSecond: Double): String {
@@ -44,6 +55,6 @@ private fun formatSpeed(bytesPerSecond: Double): String {
 /** Dipanggil dari DownloadsScreen: "  •  2.4 MB/s" saat DOWNLOADING, kosong selain itu. */
 @Composable
 internal fun downloadSpeedSuffix(task: DownloadTask): String {
-    val speed = rememberDownloadSpeed(task.id, task.downloadedBytes, task.updatedAt)
+    val speed = rememberDownloadSpeed(task.id, task.downloadedBytes)
     return if (task.state == DownloadState.DOWNLOADING && speed.isNotEmpty()) "  •  $speed" else ""
 }
