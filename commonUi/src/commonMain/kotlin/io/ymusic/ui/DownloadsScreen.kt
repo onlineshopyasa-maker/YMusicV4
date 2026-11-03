@@ -346,6 +346,16 @@ private fun DownloadCard(
                 }
                 MoreMenu(actionsFor(task, service, onRetry, onPlay, onRevealLibrary, onRevealFolder, fileActions, onOtherFormat))
             }
+            androidx.compose.foundation.text.selection.SelectionContainer(Modifier.padding(start = ContentIndent)) {
+    Text(
+        "https://www.youtube.com/watch?v=${task.videoId}",
+        style = MaterialTheme.typography.labelSmall,
+        color = c.inkMuted,
+        fontFamily = FontFamily.Monospace,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
             if (task.showsBar()) {
                 Box(Modifier.fillMaxWidth().padding(start = ContentIndent)) { DownloadBar(task, c) }
             }
