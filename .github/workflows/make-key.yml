@@ -1,0 +1,47 @@
+name: make-key
+
+# Dijalankan SEKALI: Actions -> make-key -> Run workflow.
+# Membuat kunci tanda tangan APK, mengenkripsinya dengan secret KEY_PASSPHRASE,
+# lalu menyimpan hasil terenkripsinya di repo (fork-signing/ymusic-fork.jks.enc).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  make-key:
+    runs-on: ubuntu-24.04
+    env:
+      KEY_PASSPHRASE: ${{ secrets.KEY_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate and encrypt keystore
+        run: |
+          set -euo pipefail
+          if [ -z "$KEY_PASSPHRASE" ]; then
+            echo "::error::Secret KEY_PASSPHRASE belum dibuat"; exit 1
+          fi
+          if [ "${#KEY_PASSPHRASE}" -lt 16 ]; then
+            echo "::error::KEY_PASSPHRASE minimal 16 karakter"; exit 1
+          fi
+          if [ -f fork-signing/ymusic-fork.jks.enc ]; then
+            echo "::error::Kunci sudah ada dan tidak akan ditimpa"; exit 1
+          fi
+          mkdir -p fork-signing
+          keytool -genkeypair -keystore "$RUNNER_TEMP/ymusic-fork.jks" -storetype PKCS12 \
+            -alias ymusic-fork -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass:env KEY_PASSPHRASE -keypass:env KEY_PASSPHRASE \
+            -dname "CN=YMusic Fork"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+            -pass env:KEY_PASSPHRASE \
+            -in "$RUNNER_TEMP/ymusic-fork.jks" -out fork-signing/ymusic-fork.jks.enc
+
+      - name: Commit encrypted keystore
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fork-signing/ymusic-fork.jks.enc
+          git commit -m "Add encrypted signing keystore"
+          git push
